@@ -1,0 +1,94 @@
+version: "3.8"
+
+# ---------------------------------------------------------------------------
+# WHY THESE SERVICES, IN THIS SHAPE
+# ---------------------------------------------------------------------------
+# minio        -> Data Lake (raw zone). S3-compatible object storage, so the
+#                 same boto3/S3A code works unchanged if we later point it
+#                 at real AWS S3.
+# postgres     -> Data Warehouse (curated zone), holding the star schema.
+# spark-master
+# spark-worker (x2) -> A real (small) distributed cluster, not single-node
+#                 local mode, so job submission and parallelism are genuine
+#                 and demonstrable, not simulated.
+#
+# All services share one Docker network ("data_platform_net") so they can
+# reach each other by service name (e.g. Spark jobs connect to
+# "postgres:5432" and "minio:9000", not "localhost").
+# ---------------------------------------------------------------------------
+
+services:
+
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"   # S3 API endpoint
+      - "9001:9001"   # Web console
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio_data:/data
+    networks:
+      - data_platform_net
+
+  postgres:
+    image: postgres:16
+    container_name: postgres_dwh
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - data_platform_net
+
+  spark-master:
+    image: bitnami/spark:3.5
+    container_name: spark-master
+    environment:
+      - SPARK_MODE=master
+    ports:
+      - "8080:8080"   # Spark master web UI
+      - "7077:7077"   # Spark master port (workers/jobs connect here)
+    networks:
+      - data_platform_net
+
+  spark-worker-1:
+    image: bitnami/spark:3.5
+    container_name: spark-worker-1
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_WORKER_MEMORY=2G
+      - SPARK_WORKER_CORES=2
+    depends_on:
+      - spark-master
+    networks:
+      - data_platform_net
+
+  spark-worker-2:
+    image: bitnami/spark:3.5
+    container_name: spark-worker-2
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_WORKER_MEMORY=2G
+      - SPARK_WORKER_CORES=2
+    depends_on:
+      - spark-master
+    networks:
+      - data_platform_net
+
+volumes:
+  minio_data:
+  postgres_data:
+
+networks:
+  data_platform_net:
+    driver: bridge

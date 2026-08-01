@@ -1,0 +1,19 @@
+# Python virtual environment - never versioned, recreated locally via requirements.txt
+venv/
+__pycache__/
+*.pyc
+
+# Secrets / local configuration - .env holds real credentials (even dev ones),
+# .env.example (with placeholder values) is what belongs in the repo instead
+.env
+
+# Generated data - we version the GENERATOR (generate_transactions.py), not its
+# output. The CSV is large, reproducible, and not meaningful to diff in Git.
+data_generator/*.csv
+
+# Editor/OS noise
+.vscode/
+.DS_Store
+
+# Spark/Docker local artifacts
+*.log

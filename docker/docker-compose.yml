@@ -167,6 +167,28 @@ services:
     networks:
       - data_platform_net
 
+  # ---------------------------------------------------------------------
+  # Grafana -- monitoring / analytics dashboards (Palier 2).
+  # Connects to the Data Warehouse via the provisioned datasource file
+  # (monitoring/grafana/provisioning/datasources/datasource.yml), not
+  # manual UI configuration.
+  # ---------------------------------------------------------------------
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ../monitoring/grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - postgres
+    networks:
+      - data_platform_net
+
   postgres-airflow:
     image: postgres:16
     container_name: postgres_airflow
@@ -245,6 +267,7 @@ volumes:
   postgres_data:
   postgres_airflow_data:
   airflow_logs:
+  grafana_data:
 
 networks:
   data_platform_net:

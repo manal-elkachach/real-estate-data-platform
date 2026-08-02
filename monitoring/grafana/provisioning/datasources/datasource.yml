@@ -1,0 +1,22 @@
+# Grafana reads every file in provisioning/datasources/ at startup and
+# configures the connections described here automatically -- no manual
+# "Add data source" clicking in the UI, and the config lives in Git like
+# everything else in this project.
+apiVersion: 1
+
+datasources:
+  - name: RealEstateDWH
+    uid: real-estate-dwh-postgres
+    type: postgres
+    access: proxy
+    url: postgres:5432
+    database: real_estate_dwh
+    user: dwh_user
+    isDefault: true
+    editable: true
+    secureJsonData:
+      password: dwh_password123
+    jsonData:
+      database: real_estate_dwh
+      sslmode: disable
+      postgresVersion: 1600
